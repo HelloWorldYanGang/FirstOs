@@ -3,7 +3,7 @@
 
 		ORG		0x7c00			; 程序装载
 
-; 
+; FAT12软盘描述
 
         JMP        entry
         DB        0x90
@@ -27,10 +27,10 @@
         RESB    18                
 
 
-;
+;核心程序
 
 entry:
-		MOV		AX,0			;
+		MOV		AX,0			;初始化寄存器
 		MOV		SS,AX
 		MOV		SP,0x7c00
 		MOV		DS,AX
@@ -38,20 +38,20 @@ entry:
 
 		MOV		SI,msg
 putloop:
-		MOV		AL,[SI]
-		ADD		SI,1			; 
+		MOV		AL,[SI]         ;AL装载要显示的字符
+		ADD		SI,1			; 每次显示一个字符
 		CMP		AL,0
 		JE		fin
-		MOV		AH,0x0e			; 
-		MOV		BX,15			; 
-		INT		0x10			; 
+		MOV		AH,0x0e			; 设置显示字符
+		MOV		BX,15			; 设置颜色
+		INT		0x10			; 调用16号中断  BIOS显卡显示
 		JMP		putloop
 fin:
 		HLT						; 
 		JMP		fin				; 
 
 msg:
-		DB		0x0a, 0x0a		; 
+		DB		0x0a, 0x0a		; 换行2次
 		DB		"hello, world"
 		DB		0x0a			; 
 		DB		0
