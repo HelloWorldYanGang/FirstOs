@@ -1,6 +1,6 @@
 ; hello-os
 ; TAB=4
-
+		CYLS	EQU		10
 		ORG		0x7c00			; 程序装载
 
 ; FAT12软盘描述
@@ -35,19 +35,46 @@ entry:
 		MOV		SP,0x7c00
 		MOV		DS,AX
 		
+		
 		MOV		AX,0x0820
-		MOV		ES,AX			;WS BX为缓冲地址
+		MOV		ES,AX			;ES BX为缓冲地址
 		MOV		CH,0			;柱面0
 		MOV		DH,0			;磁头0
 		MOV		CL,2			;扇区2
 		
+readloop:
+		MOV		SI,0			;记录失败次数
+retry:
 		MOV		AH,0x02			;读盘
 		MOV		AL,1			;1个扇区
 		MOV		BX,0
 		MOV		DL,0x00			;A驱动器
 		INT		0x13			;磁盘BIOS
-		JC		error
-	
+		JNC		next
+		ADD		SI,1			;出错往SI加1
+		CMP		SI,5			;比较SI与5
+		JAE		error			;SI>=5时 跳转到error
+		;复位软盘状态，再读一次
+		MOV		AH,0x00
+		MOV		DL,0x00
+		INT		0x13
+		JMP		retry
+next:
+		MOV		AX,ES			;把内存地址后移0x0020
+		ADD		AX,0x0020
+		MOV		ES,AX
+		ADD		CL,1			;扇区数+1
+		CMP		CL,18			;是否到18个扇区
+		JBE		readloop		;读下一个扇区
+		
+		MOV 	CL,1			;该柱面读完读下个柱面时，扇区重新值1
+		ADD		DH,1			;两个磁头
+		CMP		DH,2
+		JB		readloop
+		MOV		DH,0
+		ADD		CH,1
+		CMP		CH,CYLS			;柱面
+		JB		readloop
 fin:
 		HLT						; 
 		JMP		fin				; 
