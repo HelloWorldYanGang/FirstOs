@@ -29,9 +29,6 @@ DSKCAC0	EQU		0x00008000		;
 		MOV		AH,0x02
 		INT		0x16 			; keyboard BIOS
 		MOV		[LEDS],AL
-fin:
-		HLT
-		JMP 	fin
 
 
 
@@ -70,7 +67,7 @@ pipelineflush:
 		MOV		GS,AX
 		MOV		SS,AX
 
-; bootpackの転送
+; 
 
 		MOV		ESI,bootpack	; 
 		MOV		EDI,BOTPAK		; 
@@ -99,7 +96,7 @@ pipelineflush:
 ; 
 ;
 
-; bootpackの起動
+; 
 
 		MOV		EBX,BOTPAK
 		MOV		ECX,[EBX+16]
