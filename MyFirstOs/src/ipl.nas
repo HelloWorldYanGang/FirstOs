@@ -35,9 +35,10 @@ entry:
 		MOV		SP,0x7c00
 		MOV		DS,AX
 		
-		
+		;磁盘内容加载到0x8200的位置,0x0820左移4位就是0x8200
+		;由于我们是从扇区2开始加载，相当于整个磁盘加载到0x8000地址
 		MOV		AX,0x0820
-		MOV		ES,AX			;ES BX为缓冲地址
+		MOV		ES,AX			;[ES:BX]为缓冲地址
 		MOV		CH,0			;柱面0
 		MOV		DH,0			;磁头0
 		MOV		CL,2			;扇区2
@@ -75,9 +76,10 @@ next:
 		ADD		CH,1
 		CMP		CH,CYLS			;柱面
 		JB		readloop
-fin:
-		HLT						; 
-		JMP		fin				; 
+
+;跳转到0xc200
+		JMP		0xc200
+
 error:
 		MOV		SI,msg
 putloop:
@@ -90,6 +92,9 @@ putloop:
 		INT		0x10			; 调用16号中断  BIOS显卡显示
 		JMP		putloop
 
+fin:
+		HLT						; 
+		JMP		fin				; 
 
 msg:
 		DB		0x0a, 0x0a		; 换行2次
