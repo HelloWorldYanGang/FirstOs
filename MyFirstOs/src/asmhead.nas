@@ -22,7 +22,7 @@ DSKCAC0	EQU		0x00008000		;
 		INT		0x10
 		MOV		BYTE [VMODE],8
 		MOV		WORD [SCANX],320
-		MOV		WORD [SCANY],240
+		MOV		WORD [SCANY],200
 		MOV		DWORD [VRAM],0x000a0000 ;BIOS网页指明该画面模式下使用的内存地址
 
 ;用BIOS取得键盘上各种指示灯的状态
