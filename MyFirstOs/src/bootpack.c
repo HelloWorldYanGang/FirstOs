@@ -15,6 +15,11 @@ void boxfill8(unsigned char *vram, int xsize, unsigned char color, int x0, int y
 void init_screen(char *vram, int xsize, int ysize);
 //显示一个字符，颜色为c，在字库中地址为hankaku+（ascii）*16
 void printfont(char *vram, int xsize, int x, int y, char c, char *font);
+//初始化鼠标指针
+void init_mouse_cursor8(char *mouse, char bc);
+//设置图形在背景中显示，图形由buf定义，bxsize为宽度
+void show_graph_in_background(char *vram, int vxsize, int pxsize,
+	int pysize, int px0, int py0, char *buf, int bxsize);
 
 //定义调色板中的颜色代号
 #define COL8_000000		0
@@ -45,13 +50,18 @@ struct BOOTINFO
 void HariMain(void)
 {
 	struct BOOTINFO *binfo = (struct BOOTINFO *)(0x0ff0);
-
+	char mouse_data[256];
 	init_palette();//初始化调色板
 
 	init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
 	
 	printstring(binfo->vram, binfo->scrnx, 8, 8, COL8_FF0000, "aaa");
 
+	int mouse_pos_x, mouse_pos_y;
+	mouse_pos_x = (binfo->scrnx - 16 ) / 2;
+	mouse_pos_y = (binfo->scrny - 28 - 16) / 2;
+	init_mouse_cursor8(mouse_data, COL8_008484);
+	show_graph_in_background(binfo->vram, binfo->scrnx, 16, 16, mouse_pos_x, mouse_pos_y, mouse_data, 16);
 	for(;;)
 		io_hlt();
 }
@@ -166,6 +176,56 @@ void printstring(char *vram, int xsize, int x, int y, char c, char *str)
 	{
 		printfont(vram, xsize, x, y, c, hankaku + str[i] * 16);
 		x += 8;
+	}
+	return;
+}
+
+void init_mouse_cursor8(char *mouse, char bc)
+{
+	static char cursor[16][16] = {
+		"**************..",
+		"*OOOOOOOOOOO*...",
+		"*OOOOOOOOOO*....",
+		"*OOOOOOOOO*.....",
+		"*OOOOOOOO*......",
+		"*OOOOOOO*.......",
+		"*OOOOOOO*.......",
+		"*OOOOOOOO*......",
+		"*OOOO**OOO*.....",
+		"*OOO*..*OOO*....",
+		"*OO*....*OOO*...",
+		"*O*......*OOO*..",
+		"**........*OOO*.",
+		"*..........*OOO*",
+		"............*OO*",
+		".............***"
+	};
+	int x, y;
+
+	for (y = 0; y < 16; y++) {
+		for (x = 0; x < 16; x++) {
+			if (cursor[y][x] == '*') {
+				mouse[y * 16 + x] = COL8_000000;
+			}
+			if (cursor[y][x] == 'O') {
+				mouse[y * 16 + x] = COL8_FFFFFF;
+			}
+			if (cursor[y][x] == '.') {
+				mouse[y * 16 + x] = bc;//背景色
+			}
+		}
+	}
+	return;
+}
+
+void show_graph_in_background(char *vram, int vxsize, int pxsize,
+	int pysize, int px0, int py0, char *buf, int bxsize)
+{
+	int x, y;
+	for (y = 0; y < pysize; y++) {
+		for (x = 0; x < pxsize; x++) {
+			vram[(py0 + y) * vxsize + (px0 + x)] = buf[y * bxsize + x];
+		}
 	}
 	return;
 }
