@@ -1,14 +1,16 @@
-
+/*asmhead.h*/
 struct BOOTINFO
 {
 	char cyls, leds, vmode, reserve;
 	short scrnx, scrny;
 	char *vram;
 };
+#define ADDR_BOOTINFO 0x00000ff0
 
 /*naskfunc.nas*/
 void io_hlt(void);
 void io_cli(void);
+void io_sti(void);
 void io_out8(int port, int data);
 int io_load_eflags(void);
 void io_store_eflags(int eflags);
@@ -17,6 +19,7 @@ void write_mem8(int addr, int data);
 void load_gdtr(int limit, int addr);
 //执行LLDT命令
 void load_idtr(int limit, int addr);
+void asm_int_handler_21(void);
 
 /*graph.c*/
 
@@ -103,7 +106,6 @@ P：设置为0代表未被使用的中断
 struct GATE_DESCRIPTOR
 {
 	short offset_low, selector;
-
 	char dw_count, access_right;
 	short offset_high;
 };
@@ -114,3 +116,30 @@ void init_gdtidt(void);
 void set_segment_desc(struct SEGMENT_DESCRIPTOR *sd, unsigned int limit, int base, int ar);
 //设定ldt
 void set_gate_desc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar);
+
+#define ADDR_GDT     0x00270000
+#define ADDR_IDT     0x0026f800
+#define LIMIT_GDT    0x0000ffff
+#define LIMIT_IDT    0x000007ff
+#define AR_DATA_RW   0x4092
+#define AR_CODE_ER   0x409a
+#define AR_INTGATE   0x008e
+
+/* int.c */
+
+#define PIC0_ICW1		0x0020
+#define PIC0_OCW2		0x0020
+#define PIC0_IMR		0x0021
+#define PIC0_ICW2		0x0021
+#define PIC0_ICW3		0x0021
+#define PIC0_ICW4		0x0021
+#define PIC1_ICW1		0x00a0
+#define PIC1_OCW2		0x00a0
+#define PIC1_IMR		0x00a1
+#define PIC1_ICW2		0x00a1
+#define PIC1_ICW3		0x00a1
+#define PIC1_ICW4		0x00a1
+
+void init_pic(void);
+
+void int_handler_21(int *esp);

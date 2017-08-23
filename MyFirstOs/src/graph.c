@@ -43,6 +43,8 @@ void set_palette(int start, int end, unsigned char *rgb)
 		io_out8(0x03c9, rgb[2] / 4);
 		rgb += 3;
 	}
+	io_store_eflags(eflags);
+	return ;
 }
 
 
