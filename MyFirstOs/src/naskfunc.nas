@@ -42,7 +42,7 @@ _io_stihlt:	; void io_stihlt(void);
 		HLT
 		RET
 
-_io_in8:	; int io_in8(int port);
+_io_in8:	; unsigned char io_in8(int port);
 		MOV		EDX,[ESP+4]		; port
 		MOV		EAX,0
 		IN		AL,DX

@@ -11,6 +11,7 @@ struct BOOTINFO
 void io_hlt(void);
 void io_cli(void);
 void io_sti(void);
+unsigned io_in8(int port);
 void io_out8(int port, int data);
 int io_load_eflags(void);
 void io_store_eflags(int eflags);
@@ -140,6 +141,34 @@ void set_gate_desc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar)
 #define PIC1_ICW3		0x00a1
 #define PIC1_ICW4		0x00a1
 
+//键盘按键编码端口号
+#define PORT_KEYBOARD_DATA  0x0060
+
 void init_pic(void);
 
 void int_handler_21(int *esp);
+
+
+/*buffer.c*/
+#define FLAG_OVERFLOW     0x0001
+struct buffer
+{
+	unsigned char *data; //数据缓存区
+	int next_write;  //下一个加入buffer的位置
+	int next_read;//下一个读出buffer的位置
+	int size;     //buffer总空间
+	int free_size;  //buffer空闲大小
+	int flag;   //标记，是否溢出
+};
+
+//缓存区初始化
+void buffer_init(struct buffer *buffer, int size, unsigned char *buf);
+
+//往缓存区写入一个数据,成功返回0，失败返回-1
+int buffer_put(struct buffer *buffer, unsigned char data);
+
+//往缓存区读取一个数据,成功返回0，失败返回-1
+int buffer_get(struct buffer *buffer, unsigned char *ret_data);
+
+//计算剩余空间
+int buffer_used_size(struct buffer *buffer);

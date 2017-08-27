@@ -1,6 +1,9 @@
 #include "bootpack.h"
+#include <stdio.h>
 
-void init_pic()
+struct buffer keybuf;
+
+void init_pic(void)
 {
 	io_out8(PIC0_IMR,  0xff  ); /* 禁止所有中断 */
 	io_out8(PIC1_IMR,  0xff  ); /* 禁止所有中断 */
@@ -22,11 +25,12 @@ void init_pic()
 
 void int_handler_21(int *esp)
 {
-	struct BOOTINFO *binfo = (struct BOOTINFO *)(ADDR_BOOTINFO);
-	boxfill8(binfo->vram, binfo->scrnx, COL8_000000, 0, 0, 32* 8 -1, 15);
-	printstring(binfo->vram, binfo->scrnx, 0, 0, COL8_FFFFFF, "INT 21 keyboard");
-	for(;;)
+	unsigned char key_data;
+	io_out8(PIC0_OCW2, 0x61);  /*以0x60+IRQn的方式通知PIC0的IRQn号中断已经被受理，可以继续监听*/
+	key_data = io_in8(PORT_KEYBOARD_DATA);
+	if(buffer_put(&keybuf, key_data) == 0)
 	{
-		io_hlt();
+		return;
 	}
+	return;
 }
