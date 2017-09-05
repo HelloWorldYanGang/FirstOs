@@ -14,8 +14,8 @@
 		GLOBAL	_io_out8, _io_out16, _io_out32
 		GLOBAL	_io_load_eflags, _io_store_eflags
 		GLOBAL  _load_gdtr, _load_idtr
-		GLOBAL  _asm_int_handler_21
-		EXTERN  _int_handler_21
+		GLOBAL  _asm_int_handler_21, _asm_int_handler_2c
+		EXTERN  _int_handler_21, _int_handler_2c
 
 ;以下是实际的函数
 [SECTION .text]
@@ -110,6 +110,22 @@ _asm_int_handler_21:
 		MOV		DS,AX
 		MOV		ES,AX
 		CALL	_int_handler_21
+		POP		EAX
+		POPAD
+		POP		DS
+		POP		ES
+		IRETD
+
+_asm_int_handler_2c:
+		PUSH	ES
+		PUSH	DS
+		PUSHAD
+		MOV		EAX,ESP
+		PUSH	EAX
+		MOV		AX,SS
+		MOV		DS,AX
+		MOV		ES,AX
+		CALL	_int_handler_2c
 		POP		EAX
 		POPAD
 		POP		DS

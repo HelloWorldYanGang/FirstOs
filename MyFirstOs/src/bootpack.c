@@ -5,6 +5,14 @@
 #define KEY_UP    2
 
 extern struct buffer keybuf;
+extern struct buffer mousebuf;
+#define PORT_KB_STA    0x0064 //键盘控制电路状态读取端口
+#define PORT_KB_CMD    0x0064 //键盘控制电路指令写入端口
+#define PORT_KB_DATA   0x0060 //键盘控制电路数据写入端口
+#define PORT_MODE_SET  0x60   //键盘控制电路模式设定
+#define MOUSE_MODE     0x47   //鼠标模式
+#define SENDTO_MOUSE   0xd4   //将数据发送给鼠标
+#define MOUSE_ENABLE   0xf4   //激活鼠标
 
 //键盘键码与字符对应关系
 static char keytable[0x54] = {
@@ -16,18 +24,52 @@ static char keytable[0x54] = {
 		'2', '3', '0', '.'
 	};
 
+//等待键盘控制电路可以接受CPU指令
+void wait_KB_ready()
+{
+	for(;;)
+		if((io_in8(PORT_KB_STA) & 0x02) == 0)  //倒数第二位是0 表示ready
+		{
+			break;
+		}
+	return;
+}
+
+//激活鼠标
+void enable_mouse()
+{
+	wait_KB_ready();
+	io_out8(PORT_KB_CMD, SENDTO_MOUSE);
+	wait_KB_ready();
+	io_out8(PORT_KB_DATA, MOUSE_ENABLE);
+	return ;
+}
+
+//初始化键盘控制电路
+void init_KB()
+{
+	wait_KB_ready();
+	io_out8(PORT_KB_CMD, PORT_MODE_SET);
+	wait_KB_ready();
+	io_out8(PORT_KB_DATA, MOUSE_MODE);
+	return ;
+}
+
 /*主函数*/
 void HariMain(void)
 {
 	
 	struct BOOTINFO *binfo = (struct BOOTINFO *)(ADDR_BOOTINFO);
 	char mouse_data[256];
-	char buf_data[32];
-	unsigned char key_flag;
-	buffer_init(&keybuf, 32, buf_data);
+	char key_buf_data[32];
+	char mouse_buf_data[128];//鼠标数据较键盘的更多，因此缓冲区设置的大一些
+	buffer_init(&keybuf, 32, key_buf_data);
+	buffer_init(&mousebuf, 128, mouse_buf_data);
 	init_gdtidt();
 	init_pic();
 	io_sti();
+
+	init_KB();
 
 	init_palette();//初始化调色板
 	init_screen(binfo->vram, binfo->scrnx, binfo->scrny);
@@ -41,42 +83,58 @@ void HariMain(void)
 	io_out8(PIC0_IMR, 0xf9); //11111001b  IRQ1 IRQ2不屏蔽
 	io_out8(PIC1_IMR, 0xef); //11101111b  IRQ12不屏蔽
 
+	enable_mouse();
 
+	//用于记录鼠标的阶段，最初是0xfa，随后三个字节一组，用于描述鼠标的移动数据
+	int mouse_phase = 0; 
+	unsigned char mouse_move_data[3];//三个字节一组的数据 
 	for(;;)
 	{
 		io_cli();
-		if(buffer_used_size(&keybuf) > 0)
+		if(buffer_used_size(&keybuf) + buffer_used_size(&mousebuf) > 0)
 		{
-			//先保存按键值再放开中断
-			unsigned char ch;
-			if(buffer_get(&keybuf, &ch) == 0)
+			unsigned char data;
+			char s[15];
+			if(buffer_used_size(&keybuf) > 0)  //键盘数据
 			{
+				buffer_get(&keybuf, &data);
 				io_sti();
-				char str[2];
-				if(ch < 0x80)  //键按下
+				sprintf(s, "%02X", data);
+				boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 16, 15, 31);
+				printstring(binfo->vram, binfo->scrnx, 0,16, COL8_FFFFFF, s);
+			}
+			else if(buffer_used_size(&mousebuf) > 0)  //鼠标数据
+			{
+				buffer_get(&mousebuf, &data);
+				io_sti();
+				
+				if(mouse_phase == 0)
 				{
-					key_flag = KEY_DOWN;
-					str[0] = keytable[ch];
-					str[1] = 0;
+					if(data == 0xfa)
+						mouse_phase = 1;
 				}
-				else          //键松开
+				//第一个字节，0xab:a只是在0-3之间变化  b在8-F变化
+				else if(mouse_phase == 1)
 				{
-					key_flag = KEY_UP;
-					str[0] = keytable[ch - 0x80];
-					str[1] = 0;
+					mouse_phase = 2;
+					mouse_move_data[0] = data;
 				}
-				boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 0, 15, 150, 31);
-				char msg[10];
-				if(key_flag == KEY_DOWN)
+				//第二个字节，与鼠标左右移动有关
+				else if(mouse_phase ==2)
 				{
-					sprintf(msg, "%s is down!", str);
-					
+					mouse_phase = 3;
+					mouse_move_data[1] = data;
 				}
-				else
+				//第三个字节，与鼠标上下移动有关
+				else if(mouse_phase == 3)
 				{
-					sprintf(msg, "%s is up!", str);
+					mouse_phase = 1;
+					mouse_move_data[2] = data;
+					//三个字节凑齐，显示出来
+					sprintf(s, "%02X %02X %02X", mouse_move_data[0], mouse_move_data[1], mouse_move_data[2]);
+					boxfill8(binfo->vram, binfo->scrnx, COL8_008484, 32, 16, 32 + 8 * 8-1 , 31);
+					printstring(binfo->vram, binfo->scrnx, 32, 16, COL8_FFFFFF, s);
 				}
-				printstring(binfo->vram, binfo->scrnx, 0, 16, COL8_FFFFFF, msg);
 			}
 			
 		}

@@ -26,6 +26,7 @@ void init_gdtidt(void)
 
 	//设置键盘的中断回调函数
 	set_gate_desc(idt + 0x21, (int) asm_int_handler_21, 2 << 3,  AR_INTGATE);
+	set_gate_desc(idt + 0x2c, (int) asm_int_handler_2c, 2 << 3,  AR_INTGATE);
 
 	return ;
 }

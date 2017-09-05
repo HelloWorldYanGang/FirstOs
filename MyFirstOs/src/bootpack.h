@@ -21,7 +21,7 @@ void load_gdtr(int limit, int addr);
 //执行LLDT命令
 void load_idtr(int limit, int addr);
 void asm_int_handler_21(void);
-
+void asm_int_handler_2c(void);
 /*graph.c*/
 
 //初始化调色板
@@ -145,9 +145,10 @@ void set_gate_desc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar)
 #define PORT_KEYBOARD_DATA  0x0060
 
 void init_pic(void);
-
+//键盘中断函数
 void int_handler_21(int *esp);
-
+//鼠标中断函数
+void int_handler_2c(int *esp);
 
 /*buffer.c*/
 #define FLAG_OVERFLOW     0x0001
