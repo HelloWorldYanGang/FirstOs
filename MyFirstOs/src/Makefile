@@ -1,4 +1,4 @@
-OBJS_BOOTPACK = bootpack.obj naskfunc.obj hankaku.obj graph.obj destbl.obj int.obj buffer.obj
+OBJS_BOOTPACK = bootpack.obj naskfunc.obj hankaku.obj graph.obj destbl.obj int.obj buffer.obj mouse.obj keyboard.obj
 
 TOOLPATH = ../z_tools/
 INCPATH  = ../z_tools/haribote/

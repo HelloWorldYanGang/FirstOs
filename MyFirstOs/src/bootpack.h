@@ -145,10 +145,8 @@ void set_gate_desc(struct GATE_DESCRIPTOR *gd, int offset, int selector, int ar)
 #define PORT_KEYBOARD_DATA  0x0060
 
 void init_pic(void);
-//键盘中断函数
-void int_handler_21(int *esp);
-//鼠标中断函数
-void int_handler_2c(int *esp);
+
+
 
 /*buffer.c*/
 #define FLAG_OVERFLOW     0x0001
@@ -173,3 +171,32 @@ int buffer_get(struct buffer *buffer, unsigned char *ret_data);
 
 //计算剩余空间
 int buffer_used_size(struct buffer *buffer);
+
+/*mouse.c  keyboard.c*/
+
+#define PORT_KB_STA    0x0064 //键盘控制电路状态读取端口
+#define PORT_KB_CMD    0x0064 //键盘控制电路指令写入端口
+#define PORT_KB_DATA   0x0060 //键盘控制电路数据写入端口
+#define PORT_MODE_SET  0x60   //键盘控制电路模式设定
+#define MOUSE_MODE     0x47   //鼠标模式
+#define SENDTO_MOUSE   0xd4   //将数据发送给鼠标
+#define MOUSE_ENABLE   0xf4   //激活鼠标
+
+
+//记录鼠标中断的三个一组的数据buf和当前已经从中断中获取到一组中的第几个数据phase
+//用于记录鼠标的阶段，最初是0xfa，随后三个字节一组，用于描述鼠标的移动数据
+struct MOUSE_DESC
+{
+	unsigned char buf[3], phase; 
+	int x, y, btn;
+};
+
+void enable_mouse(struct MOUSE_DESC *mouse_desc);
+
+int mouse_data_decode(struct MOUSE_DESC *mouse_desc, unsigned char data);
+
+//鼠标中断函数
+void int_handler_2c(int *esp);
+
+//键盘中断函数
+void int_handler_21(int *esp);

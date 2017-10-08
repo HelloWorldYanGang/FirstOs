@@ -1,8 +1,7 @@
 #include "bootpack.h"
 #include <stdio.h>
 
-struct buffer keybuf;  //键盘按键编码缓存
-struct buffer mousebuf;  //鼠标中断数据缓存
+
 void init_pic(void)
 {
 	io_out8(PIC0_IMR,  0xff  ); /* 禁止所有中断 */
@@ -23,23 +22,5 @@ void init_pic(void)
 	return ;
 }
 
-//来自键盘的中断
-void int_handler_21(int *esp)
-{
-	unsigned char key_data;
-	io_out8(PIC0_OCW2, 0x61);  /*以0x60+IRQn的方式通知PIC0的IRQn号中断已经被受理，可以继续监听*/
-	key_data = io_in8(PORT_KEYBOARD_DATA);
-	buffer_put(&keybuf, key_data);
-	return;
-}
 
-//来自鼠标的中断
-void int_handler_2c(int *esp)
-{
-	unsigned char data;
-	io_out8(PIC1_OCW2, 0x64);   /*以0x60+IRQn的方式通知PIC1的IRQn号中断已经被受理，可以继续监听*/
-	io_out8(PIC0_OCW2, 0x62);    /*以0x60+IRQn的方式通知PIC0的IRQn号中断已经被受理，可以继续监听*/
-	data = io_in8(PORT_KEYBOARD_DATA);
-	buffer_put(&mousebuf, data);
-	return;
-}
+

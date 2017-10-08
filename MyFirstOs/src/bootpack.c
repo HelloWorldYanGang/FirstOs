@@ -7,15 +7,6 @@
 extern struct buffer keybuf;
 extern struct buffer mousebuf;
 
-
-#define PORT_KB_STA    0x0064 //键盘控制电路状态读取端口
-#define PORT_KB_CMD    0x0064 //键盘控制电路指令写入端口
-#define PORT_KB_DATA   0x0060 //键盘控制电路数据写入端口
-#define PORT_MODE_SET  0x60   //键盘控制电路模式设定
-#define MOUSE_MODE     0x47   //鼠标模式
-#define SENDTO_MOUSE   0xd4   //将数据发送给鼠标
-#define MOUSE_ENABLE   0xf4   //激活鼠标
-
 //键盘键码与字符对应关系
 static char keytable[0x54] = {
 		0,   0,   '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '^', 0,   0,
@@ -27,96 +18,6 @@ static char keytable[0x54] = {
 	};
 
 
-//记录鼠标中断的三个一组的数据buf和当前已经从中断中获取到一组中的第几个数据phase
-//用于记录鼠标的阶段，最初是0xfa，随后三个字节一组，用于描述鼠标的移动数据
-struct MOUSE_DESC
-{
-	unsigned char buf[3], phase; 
-	int x, y, btn;
-};
-
-
-//等待键盘控制电路可以接受CPU指令
-void wait_KB_ready()
-{
-	for(;;)
-		if((io_in8(PORT_KB_STA) & 0x02) == 0)  //倒数第二位是0 表示ready
-		{
-			break;
-		}
-	return;
-}
-
-//激活鼠标
-void enable_mouse(struct MOUSE_DESC *mouse_desc)
-{
-	wait_KB_ready();
-	io_out8(PORT_KB_CMD, SENDTO_MOUSE);
-	wait_KB_ready();
-	io_out8(PORT_KB_DATA, MOUSE_ENABLE);
-	//正常，0xfa会收到
-	mouse_desc->phase = 0;
-	return ;
-}
-
-//初始化键盘控制电路
-void init_KB()
-{
-	wait_KB_ready();
-	io_out8(PORT_KB_CMD, PORT_MODE_SET);
-	wait_KB_ready();
-	io_out8(PORT_KB_DATA, MOUSE_MODE);
-	return ;
-}
-
-//鼠标数据解读，当三个一组的数据凑齐之后，返回1，否则返回-1
-int mouse_data_decode(struct MOUSE_DESC *mouse_desc, unsigned char data)
-{
-	if(mouse_desc->phase == 0)
-	{
-		if(data == 0xfa)
-			mouse_desc->phase = 1;
-		return 0;
-	}
-	//第一个字节，0xab:a只是在0-3之间变化  b在8-F变化
-	if(mouse_desc->phase == 1)
-	{
-		if((data & 0xc8) == 0x08) //如果第一字节正确
-		{
-			mouse_desc->buf[0] = data;
-			mouse_desc->phase = 2;
-		}
-		
-		return 0;
-	}
-	//第二个字节，与鼠标左右移动有关
-	if(mouse_desc->phase == 2)
-	{
-		mouse_desc->buf[1] = data;
-		mouse_desc->phase = 3;
-		return 0;
-	}
-	//第三个字节，与鼠标上下移动有关
-	if(mouse_desc->phase == 3)
-	{
-		mouse_desc->buf[2] = data;
-		mouse_desc->phase = 1;
-		mouse_desc->btn = mouse_desc->buf[0] & 0x07;//取出低三位为鼠标键的状态
-		mouse_desc->x = mouse_desc->buf[1];
-		mouse_desc->y = mouse_desc->buf[2];
-		if((mouse_desc->buf[0] & 0x10) != 0)
-		{
-			mouse_desc->x |= 0xffffff00;
-		}
-		if((mouse_desc->buf[0] & 0x20) != 0)
-		{
-			mouse_desc->y |= 0xffffff00;
-		}
-		mouse_desc->y = -mouse_desc->y;
-		return 1;
-	}
-	return -1;
-}
 
 /*主函数*/
 void HariMain(void)
