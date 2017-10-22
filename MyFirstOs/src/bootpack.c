@@ -17,6 +17,41 @@ static char keytable[0x54] = {
 		'2', '3', '0', '.'
 	};
 
+#define EFLAGS_AC_BIT 0x00040000    //第18位AC位，AC=1表示i486以上的CPU
+#define CR0_CACHE_DISABLE 0x60000000
+
+
+unsigned int memtest(unsigned int start, unsigned int end)
+{
+	char flag_486;  //判断是否为i486以上的CPU
+
+	unsigned int eflags, cr0, i;
+	/*确认CPU是i386和486的*/
+	eflags = io_load_eflags();
+	eflags |= EFLAGS_AC_BIT;
+	io_store_eflags(eflags);
+	eflags = io_load_eflags();
+	if((eflags & EFLAGS_AC_BIT) != 0) //如果是i386，即使设定AC=1，AC的值还是会自动回到0
+		flag_486 = 1;
+	eflags &= ~EFLAGS_AC_BIT;
+	io_store_eflags(eflags);
+
+	if(flag_486 != 0)
+	{
+		cr0 = load_cr0();
+		cr0 |= CR0_CACHE_DISABLE;//禁止缓存
+		store_cr0(cr0);
+	} 
+	i = memtest_sub(start, end);
+	if(flag_486 != 0)
+	{
+		cr0 = load_cr0();
+		cr0 &= ~CR0_CACHE_DISABLE;//开启缓存
+		store_cr0(cr0);
+	}
+	return i;
+}
+
 
 
 /*主函数*/
@@ -50,7 +85,11 @@ void HariMain(void)
 	struct MOUSE_DESC mouse_desc;
 	enable_mouse(&mouse_desc);
 
-	
+    char str[20];
+	unsigned int i = memtest(0x00400000, 0xbfffffff)/(1024 * 1024);
+	sprintf(str, "memory %dMB", i);
+
+	printstring(binfo->vram, binfo->scrnx, 0,32, COL8_FFFFFF, str);
 	for(;;)
 	{
 		io_cli();

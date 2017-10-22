@@ -20,8 +20,13 @@ void write_mem8(int addr, int data);
 void load_gdtr(int limit, int addr);
 //执行LLDT命令
 void load_idtr(int limit, int addr);
+
+int memtest_sub(unsigned int  start, unsigned int end);
 void asm_int_handler_21(void);
 void asm_int_handler_2c(void);
+
+int load_cr0();
+void store_cr0(int cr0);
 /*graph.c*/
 
 //初始化调色板
